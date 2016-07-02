@@ -69,8 +69,10 @@ create_json () {
 }
 
 run_ssserver () {
-    $SSSERVER -qq -c $JSON_FILE 2>/dev/null >/dev/null &
-    echo $! > $SSSERVER_PID 
+    #$SSSERVER -qq -c $JSON_FILE 2>/dev/null >/dev/null &
+    touch /var/log/shadowsocks.log
+    $SSSERVER -v -c $JSON_FILE  2>/var/log/shadowsocks.log  &
+    echo $! > $SSSERVER_PID
 }
 
 check_ssserver () {
@@ -585,6 +587,19 @@ reset_used () {
     calc_remaining
 }
 
+grep_log () {
+     if [ ! -e $USER_FILE ]; then
+        echo "目前还无用户，请先添加用户"
+        return 1
+    fi
+    PORT=$1
+    echo "Last connected IP address via port $PORT"
+    netstat -tun|grep $1|sort|awk '{print $5}'|cut -d : -f 1|uniq
+    echo "Last connections details via port $PORT"
+    lsof -i -n -P | egrep ":$PORT.+ESTABLISHED"
+    exit 0
+}
+
 if [ "$#" -eq 0 ]; then
     usage
     exit 0
@@ -686,8 +701,9 @@ case $1 in
     lrules )
         list_rules
         ;;
-    * )
-        usage
+    info )
+        shift
+        grep_log $1
         ;;
 esac
 
